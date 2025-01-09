@@ -3,7 +3,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::io::prelude::*;
 
-/// This function compresses the provided data using the gzip algorithm. It uses 
+/// This function compresses the provided data using the gzip algorithm. It uses
 /// a default compression level.
 pub fn compress_data_gzip(chunk: &[u8]) -> Result<Vec<u8>, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
