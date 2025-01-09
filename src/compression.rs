@@ -1,7 +1,21 @@
+use std::io::prelude::*;
+
+use base64::{self, engine::general_purpose::URL_SAFE as base64_enc_dec, Engine as _};
 use flate2::bufread::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use std::io::prelude::*;
+
+pub fn compress_gzip_and_encode_b64(data: &[u8]) -> Result<String, String> {
+    let compressed_data = compress_data_gzip(data)?;
+    Ok(base64_enc_dec.encode(&compressed_data))
+}
+
+pub fn decode_gzip_and_decompress_b64(encoded_data: &str) -> Result<Vec<u8>, String> {
+    let compressed_data = base64_enc_dec
+        .decode(encoded_data)
+        .map_err(|e| e.to_string())?;
+    decompress_data_gzip(&compressed_data)
+}
 
 /// This function compresses the provided data using the gzip algorithm. It uses
 /// a default compression level.
