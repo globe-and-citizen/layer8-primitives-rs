@@ -6,7 +6,7 @@ use std::io::prelude::*;
 pub fn compress_data(chunk: &[u8]) -> Result<Vec<u8>, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(chunk).map_err(|e| e.to_string())?;
-    Ok(encoder.finish().map_err(|e| e.to_string())?)
+    encoder.finish().map_err(|e| e.to_string())
 }
 
 pub fn decompress_data(compressed_chunk: &[u8]) -> Result<Vec<u8>, String> {
