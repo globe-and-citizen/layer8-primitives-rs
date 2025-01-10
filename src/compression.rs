@@ -20,7 +20,7 @@ pub fn decode_b64_and_decompress_gzip(encoded_data: &str) -> Result<Vec<u8>, Str
 /// This function compresses the provided data using the gzip algorithm. It uses
 /// a default compression level.
 pub fn compress_data_gzip(chunk: &[u8]) -> Result<Vec<u8>, String> {
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
     encoder.write_all(chunk).map_err(|e| e.to_string())?;
     encoder.finish().map_err(|e| e.to_string())
 }

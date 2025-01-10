@@ -25,6 +25,6 @@ fn test_compression_with_codec_b64() {
     assert!((laugh.len() as f64 * 0.5) > compressed.len() as f64);
 
     // lets decompress the data and check if it is the same as the original
-    let decompressed = compression::decode_gzip_and_decompress_b64(&compressed).unwrap();
+    let decompressed = compression::decode_b64_and_decompress_gzip(&compressed).unwrap();
     assert_eq!(laugh.as_bytes(), decompressed.as_slice());
 }
