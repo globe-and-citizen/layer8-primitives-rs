@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Osoro Bironga <fanosoro@gmail.com>"]
 repository = "github.com/globe-and-citizen/layer8-primitives-rs"
 description = "Layer8 primitives for the Layer8 protocol"
-license = "GNU GPLv2"
+license = "GPL-2.0-only"
 readme = "README.md"
 categories = ["wasm"]
 
