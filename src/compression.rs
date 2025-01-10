@@ -10,7 +10,7 @@ pub fn compress_gzip_and_encode_b64(data: &[u8]) -> Result<String, String> {
     Ok(base64_enc_dec.encode(&compressed_data))
 }
 
-pub fn decode_gzip_and_decompress_b64(encoded_data: &str) -> Result<Vec<u8>, String> {
+pub fn decode_b64_and_decompress_gzip(encoded_data: &str) -> Result<Vec<u8>, String> {
     let compressed_data = base64_enc_dec
         .decode(encoded_data)
         .map_err(|e| e.to_string())?;
