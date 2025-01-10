@@ -1,8 +1,6 @@
 # Changelog
 
-## Unreleased
-
-## [v0.1.1] - 2025-01-10
+## [0.1.1](https://github.com/globe-and-citizen/layer8-primitives-rs/releases/tag/v0.1.1) - 2025-01-10
 
 ### Added
 
