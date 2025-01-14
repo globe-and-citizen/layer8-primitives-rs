@@ -207,11 +207,11 @@ impl RoundtripEnvelope {
         Ok(val)
     }
 
-    fn to_json_bytes(&self) -> Vec<u8> {
+    pub fn to_json_bytes(&self) -> Vec<u8> {
         serde_json::to_vec(self).expect("RoundtripEnvelope implements Serialize")
     }
 
-    fn from_json_bytes(data: &[u8]) -> Result<Self, String> {
+    pub fn from_json_bytes(data: &[u8]) -> Result<Self, String> {
         serde_json::from_slice(data).map_err(|e| e.to_string())
     }
 }
