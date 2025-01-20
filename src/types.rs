@@ -195,23 +195,23 @@ pub struct RoundtripEnvelope {
 }
 
 impl RoundtripEnvelope {
-    fn encode(data: &[u8]) -> Self {
+    pub fn encode(data: &[u8]) -> Self {
         let mut val = String::new();
         base64_enc_dec.encode_string(data, &mut val);
         RoundtripEnvelope { data: val }
     }
 
-    fn decode(&self) -> Result<Vec<u8>, base64::DecodeError> {
+    pub fn decode(&self) -> Result<Vec<u8>, base64::DecodeError> {
         let mut val = Vec::new();
         base64_enc_dec.decode_vec(&self.data, &mut val)?;
         Ok(val)
     }
 
-    fn to_json_bytes(&self) -> Vec<u8> {
+    pub fn to_json_bytes(&self) -> Vec<u8> {
         serde_json::to_vec(self).expect("RoundtripEnvelope implements Serialize")
     }
 
-    fn from_json_bytes(data: &[u8]) -> Result<Self, String> {
+    pub fn from_json_bytes(data: &[u8]) -> Result<Self, String> {
         serde_json::from_slice(data).map_err(|e| e.to_string())
     }
 }
