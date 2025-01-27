@@ -220,3 +220,11 @@ impl RoundtripEnvelope {
 pub struct ServeStatic {
     pub __url_path: String,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WebsocketPayload {
+    /// The backend url contains the url to the backend server, and any query parameters.
+    pub backend_url: String,
+    /// This data is the payload that in all cases is expected to be binary data.
+    pub data: Vec<u8>,
+}
