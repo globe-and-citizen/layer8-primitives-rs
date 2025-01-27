@@ -222,7 +222,7 @@ pub struct ServeStatic {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct WebsocketPayload {
+pub struct WebSocketPayload {
     /// The backend url contains the url to the backend server, and any query parameters.
     pub backend_url: String,
     /// This data is the payload that in all cases is expected to be binary data.
