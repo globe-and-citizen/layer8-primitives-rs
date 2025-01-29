@@ -200,9 +200,12 @@ pub struct Response {
 /// the formats that are expected to be sent through the proxy server.
 #[derive(Serialize, Deserialize)]
 pub enum Layer8Envelope {
+    /// This is the standard HTTP request/response format.
     Http(RoundtripEnvelope),
+    /// This is what the proxy parses from the client.
     WebSocket(WebSocketPayload),
-    Raw(String),
+    /// This format is up to the library to consume and interpret in the context of usage.
+    Raw(Vec<u8>),
 }
 
 impl Layer8Envelope {
