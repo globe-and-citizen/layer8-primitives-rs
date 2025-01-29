@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::SystemTime};
 
 use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 use layer8_primitives::{
@@ -321,5 +321,56 @@ mod http_mock_server {
                 Ok(Response::new(Full::new(enc_res_json.into())))
             }
         }
+    }
+}
+
+#[test]
+fn test_roundtrip_http() {
+    let http = json!({
+        "Http": {
+            "data": "SGVsbG8sIFdvcmxkIQ=="
+        }
+    });
+
+    let val = serde_json::from_value::<types::Layer8Envelope>(http).unwrap();
+    match val {
+        types::Layer8Envelope::Http(http) => {
+            assert_eq!(http.data, "SGVsbG8sIFdvcmxkIQ==");
+        }
+        _ => panic!("Expected Http variant"),
+    }
+}
+
+#[test]
+fn test_roundtrip_raw() {
+    let raw = json!({
+        "Raw": [1, 2, 3, 4, 5]
+    });
+
+    let val = serde_json::from_value::<types::Layer8Envelope>(raw).unwrap();
+    match val {
+        types::Layer8Envelope::Raw(raw) => {
+            assert_eq!(raw, vec![1, 2, 3, 4, 5]);
+        }
+        _ => panic!("Expected Raw variant"),
+    }
+}
+
+#[test]
+fn test_roundtrip_websocket() {
+    let ws = json!({
+        "WebSocket": {
+            "payload": "Hello, World!",
+            "metadata": [1, 2, 3, 4, 5]
+        }
+    });
+
+    let val = serde_json::from_value::<types::Layer8Envelope>(ws).unwrap();
+    match val {
+        types::Layer8Envelope::WebSocket(ws) => {
+            assert_eq!(ws.payload, "Hello, World!");
+            assert_eq!(ws.metadata, vec![1, 2, 3, 4, 5]);
+        }
+        _ => panic!("Expected WebSocket variant"),
     }
 }

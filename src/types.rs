@@ -261,7 +261,8 @@ pub struct WebSocketPayload {
     pub metadata: Vec<u8>,
 }
 
-// This is subject to change and is not final.
+/// This struct represents the metadata that is expected to be sent to the server.
+#[derive(Serialize, Deserialize)]
 pub struct WebSocketMetadata {
     pub backend_url: String,
 }
