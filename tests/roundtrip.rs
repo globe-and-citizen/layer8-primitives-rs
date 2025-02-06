@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::SystemTime};
 
 use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 use layer8_primitives::{
@@ -109,7 +109,6 @@ async fn test_mock_server() {
 
 mod http_mock_server {
     use std::{
-        collections::HashMap,
         convert::Infallible,
         net::{Ipv4Addr, SocketAddrV4},
         sync::{Arc, Mutex},
@@ -126,7 +125,7 @@ mod http_mock_server {
     use hyper_util::rt::TokioIo;
     use layer8_primitives::{
         crypto::{base64_to_jwk, generate_key_pair, Jwk, KeyUse},
-        types,
+        types::{self, Layer8Envelope, RoundtripEnvelope},
     };
     use tokio::{net::TcpListener, sync::oneshot};
     use tower::ServiceBuilder;
@@ -267,13 +266,17 @@ mod http_mock_server {
                     body.extend_from_slice(&chunk.into_data().unwrap());
                 }
 
-                let req_body = serde_json::from_slice::<HashMap<String, String>>(&body).unwrap();
+                let roundtrip = {
+                    let response = Layer8Envelope::from_json_bytes(&body).unwrap();
+                    match response {
+                        Layer8Envelope::Http(roundtrip) => roundtrip,
+                        _ => panic!("Expected Http response"),
+                    }
+                };
 
                 // it is expected that the body is encrypted and encoded in base64 format
                 // and set to the "data" key of the request body
-                let data = base64_enc_dec
-                    .decode(req_body.get("data").unwrap())
-                    .unwrap();
+                let data = base64_enc_dec.decode(roundtrip.data).unwrap();
 
                 _ = server_priv_key
                     .get_ecdh_shared_secret(server_pub_key)
@@ -310,13 +313,64 @@ mod http_mock_server {
                     .symmetric_encrypt(serde_json::to_string(&res).unwrap().as_bytes())
                     .unwrap();
 
-                let enc_res_json = serde_json::json!({
-                    "data": base64_enc_dec.encode(&enc_res),
+                let enc_res_json = Layer8Envelope::Http(RoundtripEnvelope {
+                    data: base64_enc_dec.encode(&enc_res),
                 })
-                .to_string();
+                .to_json_bytes();
 
-                Ok(Response::new(Full::new(Bytes::from(enc_res_json))))
+                Ok(Response::new(Full::new(enc_res_json.into())))
             }
         }
+    }
+}
+
+#[test]
+fn test_roundtrip_http() {
+    let http = json!({
+        "Http": {
+            "data": "SGVsbG8sIFdvcmxkIQ=="
+        }
+    });
+
+    let val = serde_json::from_value::<types::Layer8Envelope>(http).unwrap();
+    match val {
+        types::Layer8Envelope::Http(http) => {
+            assert_eq!(http.data, "SGVsbG8sIFdvcmxkIQ==");
+        }
+        _ => panic!("Expected Http variant"),
+    }
+}
+
+#[test]
+fn test_roundtrip_raw() {
+    let raw = json!({
+        "Raw": [1, 2, 3, 4, 5]
+    });
+
+    let val = serde_json::from_value::<types::Layer8Envelope>(raw).unwrap();
+    match val {
+        types::Layer8Envelope::Raw(raw) => {
+            assert_eq!(raw, vec![1, 2, 3, 4, 5]);
+        }
+        _ => panic!("Expected Raw variant"),
+    }
+}
+
+#[test]
+fn test_roundtrip_websocket() {
+    let ws = json!({
+        "WebSocket": {
+            "payload": "Hello, World!",
+            "metadata": [1, 2, 3, 4, 5]
+        }
+    });
+
+    let val = serde_json::from_value::<types::Layer8Envelope>(ws).unwrap();
+    match val {
+        types::Layer8Envelope::WebSocket(ws) => {
+            assert_eq!(ws.payload, "Hello, World!");
+            assert_eq!(ws.metadata, vec![1, 2, 3, 4, 5]);
+        }
+        _ => panic!("Expected WebSocket variant"),
     }
 }

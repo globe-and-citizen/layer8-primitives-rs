@@ -62,15 +62,18 @@ impl ProxyClient {
         up_jwt: &str,
         uuid: &str,
     ) -> Result<Vec<u8>, String> {
-        let request_data = RoundtripEnvelope::encode(
-            &shared_secret
-                .symmetric_encrypt(
-                    &serde_json::to_vec(request)
-                        .map_err(|e| format!("Failed to serialize request: {}", e))?,
-                )
-                .map_err(|e| format!("Failed to encrypt request: {}", e))?,
-        )
-        .to_json_bytes();
+        let request_data = {
+            let roundtrip = RoundtripEnvelope::encode(
+                &shared_secret
+                    .symmetric_encrypt(
+                        &serde_json::to_vec(request)
+                            .map_err(|e| format!("Failed to serialize request: {}", e))?,
+                    )
+                    .map_err(|e| format!("Failed to encrypt request: {}", e))?,
+            );
+
+            Layer8Envelope::Http(roundtrip).to_json_bytes()
+        };
 
         let parsed_backend_url = Url::parse(backend_url).map_err(|e| e.to_string())?;
         let (proxy_url, forward_to_host) = {
@@ -148,14 +151,20 @@ impl ProxyClient {
             .await
             .map_err(|e| format!("Failed to read response: {}", e))?;
 
-        let response_data = RoundtripEnvelope::from_json_bytes(&body)
-            .map_err(|e| {
-                format!(
-                    "Failed to parse json response: {}\n Body is: {}",
-                    e,
-                    String::from_utf8_lossy(&body)
-                )
-            })?
+        let response = Layer8Envelope::from_json_bytes(&body).map_err(|e| {
+            format!(
+                "Failed to parse json response: {}\n Body is: {}",
+                e,
+                String::from_utf8_lossy(&body)
+            )
+        })?;
+
+        let roundtrip = match response {
+            Layer8Envelope::Http(roundtrip) => roundtrip,
+            _ => return Err("Expected Http response".to_string()),
+        };
+
+        let response_data = roundtrip
             .decode()
             .map_err(|e| format!("Failed to decode response: {}", e))?;
 
@@ -185,6 +194,28 @@ pub struct Response {
     pub status_text: String,
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
+}
+
+/// This enum represents the data that is sent through the proxy server. It expands
+/// the formats that are expected to be sent through the proxy server.
+#[derive(Serialize, Deserialize)]
+pub enum Layer8Envelope {
+    /// This is the standard HTTP request/response format.
+    Http(RoundtripEnvelope),
+    /// This is what the proxy parses from the client.
+    WebSocket(WebSocketPayload),
+    /// This format is up to the library to consume and interpret in the context of usage.
+    Raw(Vec<u8>),
+}
+
+impl Layer8Envelope {
+    pub fn to_json_bytes(&self) -> Vec<u8> {
+        serde_json::to_vec(self).expect("Layer8Envelope implements Serialize")
+    }
+
+    pub fn from_json_bytes(data: &[u8]) -> Result<Self, String> {
+        serde_json::from_slice(data).map_err(|e| e.to_string())
+    }
 }
 
 /// This struct is used to serialize and deserialize the encrypted data, for the purpose of
@@ -219,4 +250,19 @@ impl RoundtripEnvelope {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ServeStatic {
     pub __url_path: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct WebSocketPayload {
+    /// This data is expected to be a base64 encoded string of encrypted data.
+    pub payload: String,
+    /// The metadata is expected to be a JSON object, arbitrary data that is expected to be sent to the server.
+    /// Expect [`WebSocketMetadata`] to be used here.
+    pub metadata: Vec<u8>,
+}
+
+/// This struct represents the metadata that is expected to be sent to the server.
+#[derive(Serialize, Deserialize)]
+pub struct WebSocketMetadata {
+    pub backend_url: String,
 }
