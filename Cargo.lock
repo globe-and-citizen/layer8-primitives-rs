@@ -740,6 +740,7 @@ dependencies = [
  "aes-gcm",
  "base64 0.22.1",
  "flate2",
+ "getrandom",
  "http",
  "http-body-util",
  "hyper",
