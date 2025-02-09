@@ -21,7 +21,6 @@ aes-gcm = "0.10.3"
 uuid = { version = "1", features = ["js", "v4", "fast-rng"] }
 flate2 = { version = "1" }
 
-
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies] # Transient dependency for [`aes-gcm@0.10.3`]
 getrandom = { version = "0.2", features = ["js"] }
 
