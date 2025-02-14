@@ -252,7 +252,7 @@ pub struct ServeStatic {
     pub __url_path: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct WebSocketPayload {
     /// This data is expected to be a base64 encoded string of encrypted data.
     pub payload: Option<String>,
