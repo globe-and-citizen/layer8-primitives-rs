@@ -252,13 +252,13 @@ pub struct ServeStatic {
     pub __url_path: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct WebSocketPayload {
     /// This data is expected to be a base64 encoded string of encrypted data.
-    pub payload: String,
-    /// The metadata is expected to be a JSON object, arbitrary data that is expected to be sent to the server.
+    pub payload: Option<String>,
+    /// The metadata is expected to be a JSON value, arbitrary data that is expected to be sent to the server.
     /// Expect [`WebSocketMetadata`] to be used here.
-    pub metadata: Vec<u8>,
+    pub metadata: serde_json::Value,
 }
 
 /// This struct represents the metadata that is expected to be sent to the server.

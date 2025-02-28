@@ -368,8 +368,8 @@ fn test_roundtrip_websocket() {
     let val = serde_json::from_value::<types::Layer8Envelope>(ws).unwrap();
     match val {
         types::Layer8Envelope::WebSocket(ws) => {
-            assert_eq!(ws.payload, "Hello, World!");
-            assert_eq!(ws.metadata, vec![1, 2, 3, 4, 5]);
+            assert_eq!(ws.payload, Some("Hello, World!".to_string()));
+            assert_eq!(ws.metadata, json!([1, 2, 3, 4, 5]));
         }
         _ => panic!("Expected WebSocket variant"),
     }
