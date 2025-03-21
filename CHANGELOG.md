@@ -2,6 +2,28 @@
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/globe-and-citizen/layer8-primitives-rs/compare/v0.1.1...v0.1.2) - 2025-03-21
+
+### Other
+
+- revert ver bumps
+- revert ver bumps
+- ver bump
+- with tests
+- send actual json serialized types
+- convenience derives
+- make payload optional
+- rm unrelated
+- provide js feat for transient dep
+- add metadata serde
+- with docs & using bin for raw
+- specify roundtrip format
+- consistent naming
+- use envelope
+- websocket data wrapper
+- pub envelope methods
+- pub codec for envelope
+
 ### Changed
 
 - Provided better transport types for Layer8Envelope. Includes `Layer8Envelope::Http`, `Layer8Envelope::WebSocket` and `Layer8Envelope::Raw`, the latter being a catch-all for any other transport type. [#7](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/7)
