@@ -23,7 +23,7 @@ impl ProxyClient {
     /// Handles the exchange to the proxy server. It encrypts the request, sends it and decrypts the response.
     pub async fn r#do(
         &self,
-        request: &Request,
+        request: (&Request, &RequestMetadata),
         shared_secret: &Jwk,
         backend_url: &str,
         is_static: bool,
@@ -36,7 +36,7 @@ impl ProxyClient {
 
     async fn transfer(
         &self,
-        request: &Request,
+        request: (&Request, &RequestMetadata),
         shared_secret: &Jwk,
         backend_url: &str,
         is_static: bool,
@@ -55,7 +55,7 @@ impl ProxyClient {
 
     async fn do_(
         &self,
-        request: &Request,
+        request: (&Request, &RequestMetadata),
         shared_secret: &Jwk,
         backend_url: &str,
         is_static: bool,
@@ -66,7 +66,7 @@ impl ProxyClient {
             let roundtrip = RoundtripEnvelope::encode(
                 &shared_secret
                     .symmetric_encrypt(
-                        &serde_json::to_vec(request)
+                        &serde_json::to_vec(request.0)
                             .map_err(|e| format!("Failed to serialize request: {}", e))?,
                     )
                     .map_err(|e| format!("Failed to encrypt request: {}", e))?,
@@ -97,6 +97,12 @@ impl ProxyClient {
 
             (proxy_url, forward_to_host)
         };
+
+        let encrypted_request_header = base64_enc_dec.encode(
+            &shared_secret
+                .symmetric_encrypt(&request_data)
+                .map_err(|e| format!("Failed to encrypt request header: {}", e))?,
+        );
 
         // adding headers
         let mut header_map = reqwest::header::HeaderMap::new();
@@ -130,6 +136,12 @@ impl ProxyClient {
                 HeaderValue::from_str(uuid).expect("expected x-client-uuid to be valid; qed"),
             );
 
+            header_map.insert(
+                "layer8-request-header",
+                HeaderValue::from_str(&encrypted_request_header)
+                    .expect("expected layer8-request-header to be valid; qed"),
+            );
+
             if is_static {
                 header_map.insert(
                     "X-Static",
@@ -159,28 +171,31 @@ impl ProxyClient {
             )
         })?;
 
-        let roundtrip = match response {
-            Layer8Envelope::Http(roundtrip) => roundtrip,
+        match response {
+            Layer8Envelope::Http(roundtrip) => {
+                let response_data = roundtrip
+                    .decode()
+                    .map_err(|e| format!("Failed to decode response: {}", e))?;
+
+                shared_secret
+                    .symmetric_decrypt(&response_data)
+                    .map_err(|e| format!("Failed to decrypt response: {}", e))
+            }
             _ => return Err("Expected Http response".to_string()),
-        };
-
-        let response_data = roundtrip
-            .decode()
-            .map_err(|e| format!("Failed to decode response: {}", e))?;
-
-        shared_secret
-            .symmetric_decrypt(&response_data)
-            .map_err(|e| format!("Failed to decrypt response: {}", e))
+        }
     }
 }
 
 /// This struct represents the request that is intended to be sent to the backend server to be processed by the middleware.
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Request {
+    pub body: Vec<u8>,
+}
+
+#[derive(Deserialize, Serialize, Default, Debug)]
+pub struct RequestMetadata {
     pub method: String,
     pub headers: HashMap<String, String>,
-    pub body: Vec<u8>,
-
     /// This points to the absolute path of the URL. Including any query parameters if any.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "__url_path")]
@@ -188,7 +203,7 @@ pub struct Request {
 }
 
 /// This struct represents the response that is received from the backend server and packaged by the middleware.
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Response {
     pub status: u16,
     pub status_text: String,
@@ -204,8 +219,6 @@ pub enum Layer8Envelope {
     Http(RoundtripEnvelope),
     /// This is what the proxy parses from the client.
     WebSocket(WebSocketPayload),
-    /// This format is up to the library to consume and interpret in the context of usage.
-    Raw(Vec<u8>),
 }
 
 impl Layer8Envelope {
