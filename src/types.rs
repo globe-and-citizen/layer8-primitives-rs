@@ -181,7 +181,7 @@ impl ProxyClient {
                     .symmetric_decrypt(&response_data)
                     .map_err(|e| format!("Failed to decrypt response: {}", e))
             }
-            _ => return Err("Expected Http response".to_string()),
+            _ => Err("Expected Http response".to_string()),
         }
     }
 }
