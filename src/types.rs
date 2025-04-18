@@ -100,7 +100,10 @@ impl ProxyClient {
 
         let encrypted_request_header = base64_enc_dec.encode(
             &shared_secret
-                .symmetric_encrypt(&request_data)
+                .symmetric_encrypt(
+                    &serde_json::to_vec(request.1)
+                        .expect("we expect the request metadata to be serializable; qed"),
+                )
                 .map_err(|e| format!("Failed to encrypt request header: {}", e))?,
         );
 
