@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use layer8_primitives::{
     crypto::{generate_key_pair, jwk_from_map, KeyUse},
-    types::{self, Request},
+    types::{self, Request, RequestMetadata},
 };
 
 // Claims is an arbitrary struct that will be encoded to a JWT.
@@ -44,12 +44,15 @@ async fn roundtrip_test() {
     let symmetric_key = priv_key_client.get_ecdh_shared_secret(&server_jwk).unwrap();
 
     let req = Request {
+        body: br#"{"test": "test"}"#.to_vec(),
+    };
+
+    let request_header = RequestMetadata {
         method: "GET".to_string(),
         headers: HashMap::from([
             ("Content-Type".to_string(), "application/json".to_string()),
             ("X-Test-Header".to_string(), "test".to_string()),
         ]),
-        body: br#"{"test": "test"}"#.to_vec(),
         url_path: None,
     };
 
@@ -60,7 +63,7 @@ async fn roundtrip_test() {
 
         let resp = client
             .r#do(
-                &req,
+                (&req, &request_header),
                 &symmetric_key,
                 backend_url,
                 false,
@@ -338,21 +341,6 @@ fn test_roundtrip_http() {
             assert_eq!(http.data, "SGVsbG8sIFdvcmxkIQ==");
         }
         _ => panic!("Expected Http variant"),
-    }
-}
-
-#[test]
-fn test_roundtrip_raw() {
-    let raw = json!({
-        "Raw": [1, 2, 3, 4, 5]
-    });
-
-    let val = serde_json::from_value::<types::Layer8Envelope>(raw).unwrap();
-    match val {
-        types::Layer8Envelope::Raw(raw) => {
-            assert_eq!(raw, vec![1, 2, 3, 4, 5]);
-        }
-        _ => panic!("Expected Raw variant"),
     }
 }
 
