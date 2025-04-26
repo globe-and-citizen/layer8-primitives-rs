@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/globe-and-citizen/layer8-primitives-rs/compare/v0.1.2...v0.2.0) - 2025-04-26
+
+### Other
+
+- Revert "upd: version bump ([#17](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/17))" ([#18](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/18))
+- version bump ([#17](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/17))
+- use ubuntu latest ([#16](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/16))
+- [**breaking**] splitting metadata from body ([#15](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/15))
+
 ## [0.1.2](https://github.com/globe-and-citizen/layer8-primitives-rs/compare/v0.1.1...v0.1.2) - 2025-03-21
 
 ### Other
