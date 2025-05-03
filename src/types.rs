@@ -14,6 +14,12 @@ pub struct Client(Url);
 /// This serves as extra doc that the client is specifically a proxy client.
 type ProxyClient = Client;
 
+impl ProxyClient {
+    pub fn get_url(&self) -> &Url {
+        &self.0
+    }
+}
+
 /// This function helps create the client using the provided URL.
 pub fn new_client(url: &str) -> Result<Client, String> {
     url::Url::parse(url).map_err(|e| e.to_string()).map(Client)
