@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/globe-and-citizen/layer8-primitives-rs/compare/v0.2.0...v0.2.1) - 2025-05-11
+
+### Other
+
+- provide getter for proxyClient url ([#20](https://github.com/globe-and-citizen/layer8-primitives-rs/pull/20))
+
 ## [0.2.0](https://github.com/globe-and-citizen/layer8-primitives-rs/compare/v0.1.2...v0.2.0) - 2025-04-26
 
 ### Other
