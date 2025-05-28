@@ -149,10 +149,7 @@ impl ProxyClient {
 
         // if status is != 200; ok to report with body as is
         if status != 200 {
-            return Err((
-                status,
-                String::from_utf8(body.into()).unwrap_or(String::new()),
-            ));
+            return Err((status, String::from_utf8(body.into()).unwrap_or_default()));
         }
 
         let response = Layer8Envelope::from_json_bytes(&body).map_err(|e| {
