@@ -147,6 +147,14 @@ impl ProxyClient {
             .await
             .map_err(|e| (-1, format!("Failed to read response: {}", e)))?;
 
+        // if status is != 200; ok to report with body as is
+        if status != 200 {
+            return Err((
+                status,
+                String::from_utf8(body.into()).unwrap_or(String::new()),
+            ));
+        }
+
         let response = Layer8Envelope::from_json_bytes(&body).map_err(|e| {
             (
                 status,
