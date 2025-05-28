@@ -33,60 +33,32 @@ impl ProxyClient {
         shared_secret: &Jwk,
         backend_url: &str,
         is_static: bool,
-        up_jwt: &str,
-        uuid: &str,
-    ) -> Result<Response, String> {
-        self.transfer(request, shared_secret, backend_url, is_static, up_jwt, uuid)
-            .await
-    }
-
-    async fn transfer(
-        &self,
-        request: (&Request, &RequestMetadata),
-        shared_secret: &Jwk,
-        backend_url: &str,
-        is_static: bool,
-        up_jwt: &str,
-        uuid: &str,
-    ) -> Result<Response, String> {
-        if up_jwt.is_empty() || uuid.is_empty() {
-            return Err("up_jwt and uuid are required".to_string());
+        provider_session: &str,
+        client_uuid: &str,
+    ) -> Result<Response, (i16, String)> {
+        if provider_session.is_empty() || client_uuid.is_empty() {
+            return Err((-1, "up_jwt and uuid are required".to_string()));
         }
 
-        let response_data = self
-            .do_(request, shared_secret, backend_url, is_static, up_jwt, uuid)
-            .await?;
-        serde_json::from_slice::<Response>(&response_data).map_err(|e| e.to_string())
-    }
-
-    async fn do_(
-        &self,
-        request: (&Request, &RequestMetadata),
-        shared_secret: &Jwk,
-        backend_url: &str,
-        is_static: bool,
-        up_jwt: &str,
-        uuid: &str,
-    ) -> Result<Vec<u8>, String> {
         let request_data = {
             let roundtrip = RoundtripEnvelope::encode(
                 &shared_secret
                     .symmetric_encrypt(
                         &serde_json::to_vec(request.0)
-                            .map_err(|e| format!("Failed to serialize request: {}", e))?,
+                            .map_err(|e| (-1, format!("Failed to serialize request: {}", e)))?,
                     )
-                    .map_err(|e| format!("Failed to encrypt request: {}", e))?,
+                    .map_err(|e| (-1, format!("Failed to encrypt request: {}", e)))?,
             );
 
             Layer8Envelope::Http(roundtrip).to_json_bytes()
         };
 
-        let parsed_backend_url = Url::parse(backend_url).map_err(|e| e.to_string())?;
+        let parsed_backend_url = Url::parse(backend_url).map_err(|e| (-1, e.to_string()))?;
         let (proxy_url, forward_to_host) = {
             let mut proxy_url = self
                 .0
                 .join(parsed_backend_url.path())
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| (-1, e.to_string()))?;
 
             if let Some(query) = parsed_backend_url.query() {
                 proxy_url.set_query(Some(query));
@@ -94,7 +66,7 @@ impl ProxyClient {
 
             let mut forward_to_host = parsed_backend_url
                 .host_str()
-                .ok_or_else(|| "backend_url expected to have a host".to_string())?
+                .ok_or_else(|| (-1, "backend_url expected to have a host".to_string()))?
                 .to_string();
 
             if let Some(port) = &parsed_backend_url.port() {
@@ -110,7 +82,7 @@ impl ProxyClient {
                     &serde_json::to_vec(request.1)
                         .expect("we expect the request metadata to be serializable; qed"),
                 )
-                .map_err(|e| format!("Failed to encrypt request header: {}", e))?,
+                .map_err(|e| (-1, format!("Failed to encrypt request header: {}", e)))?,
         );
 
         // adding headers
@@ -137,12 +109,13 @@ impl ProxyClient {
 
             header_map.insert(
                 "up-JWT",
-                HeaderValue::from_str(up_jwt).expect("expected up-JWT to be valid; qed"),
+                HeaderValue::from_str(provider_session).expect("expected up-JWT to be valid; qed"),
             );
 
             header_map.insert(
                 "x-client-uuid",
-                HeaderValue::from_str(uuid).expect("expected x-client-uuid to be valid; qed"),
+                HeaderValue::from_str(client_uuid)
+                    .expect("expected x-client-uuid to be valid; qed"),
             );
 
             header_map.insert(
@@ -165,33 +138,45 @@ impl ProxyClient {
             .headers(header_map)
             .send()
             .await
-            .map_err(|e| format!("Failed to send request: {}", e))?;
+            .map_err(|e| (-1, format!("Failed to send request: {}", e)))?;
+
+        let status = server_resp.status().clone().as_u16() as i16;
 
         let body = server_resp
             .bytes()
             .await
-            .map_err(|e| format!("Failed to read response: {}", e))?;
+            .map_err(|e| (-1, format!("Failed to read response: {}", e)))?;
+
+        // if status is != 200; ok to report with body as is
+        if status != 200 {
+            return Err((status, String::from_utf8(body.into()).unwrap_or_default()));
+        }
 
         let response = Layer8Envelope::from_json_bytes(&body).map_err(|e| {
-            format!(
-                "Failed to parse json response: {}\n Body is: {}",
-                e,
-                String::from_utf8_lossy(&body)
+            (
+                status,
+                format!(
+                    "Failed to parse json response: {}\n Body is: {}",
+                    e,
+                    String::from_utf8_lossy(&body)
+                ),
             )
         })?;
 
-        match response {
+        let response_data = match response {
             Layer8Envelope::Http(roundtrip) => {
                 let response_data = roundtrip
                     .decode()
-                    .map_err(|e| format!("Failed to decode response: {}", e))?;
+                    .map_err(|e| (status, format!("Failed to decode response: {}", e)))?;
 
                 shared_secret
                     .symmetric_decrypt(&response_data)
-                    .map_err(|e| format!("Failed to decrypt response: {}", e))
+                    .map_err(|e| (status, format!("Failed to decrypt response: {}", e)))
             }
-            _ => Err("Expected Http response".to_string()),
-        }
+            _ => Err((status, "Expected Http response".to_string())),
+        }?;
+
+        serde_json::from_slice::<Response>(&response_data).map_err(|e| (status, e.to_string()))
     }
 }
 
